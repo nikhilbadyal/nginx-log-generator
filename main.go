@@ -33,27 +33,40 @@ func main() {
 
 	gofakeit.Seed(time.Now().UnixNano())
 
-	var ip, httpMethod, path, httpVersion, referrer, userAgent string
+	var ip, httpMethod, path, httpVersion, referrer, http_x_forwarded_for,upstream,userAgent string
 	var statusCode, bodyBytesSent int
 	var timeLocal time.Time
+	var responseTime float32
 
 	httpVersion = "HTTP/1.1"
-	referrer = "-"
 
 	for range ticker.C {
-		timeLocal = time.Now()
 
 		ip = weightedIPVersion(cfg.IPv4Percent)
+		http_x_forwarded_for = weightedIPVersion(cfg.IPv4Percent)
+		upstream = weightedIPVersion(cfg.IPv4Percent)
 		httpMethod = weightedHTTPMethod(cfg.PercentageGet, cfg.PercentagePost, cfg.PercentagePut, cfg.PercentagePatch, cfg.PercentageDelete)
 		path = randomPath(cfg.PathMinLength, cfg.PathMaxLength)
 		statusCode = weightedStatusCode(cfg.StatusOkPercent)
 		bodyBytesSent = realisticBytesSent(statusCode)
 		userAgent = gofakeit.UserAgent()
+		responseTime = realisticResponseTime()
+		referrer = httpReferrer()
+		timeLocal = timeStamp()
 
-		fmt.Printf("%s - - [%s] \"%s %s %s\" %v %v \"%s\" \"%s\"\n", ip, timeLocal.Format("02/Jan/2006:15:04:05 -0700"), httpMethod, path, httpVersion, statusCode, bodyBytesSent, referrer, userAgent)
+
+		fmt.Printf("%s %s [%s] %v %s:8000 %f \"%s %s %s\" %v \"%s\" \"%s\"\n", ip,http_x_forwarded_for, timeLocal.Format("02/Jan/2006:15:04:05 -0700"),statusCode, upstream,responseTime, httpMethod, path, httpVersion, bodyBytesSent, referrer, userAgent)
 	}
 }
 
+func timeStamp() time.Time {
+    current := time.Now()
+    start := current.AddDate(-1, 0, 0)
+    return gofakeit.DateRange(start, current)
+}
+func httpReferrer() string{
+    return gofakeit.URL()
+}
 func realisticBytesSent(statusCode int) int {
 	if statusCode != 200 {
 		return gofakeit.Number(30, 120)
@@ -62,6 +75,9 @@ func realisticBytesSent(statusCode int) int {
 	return gofakeit.Number(800, 3100)
 }
 
+func realisticResponseTime() float32 {
+	return gofakeit.Float32Range(0.0, 7.0)
+}
 func weightedStatusCode(percentageOk int) int {
 	roll := gofakeit.Number(0, 100)
 	if roll <= percentageOk {
