@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"strings"
 	"time"
 
@@ -33,10 +34,20 @@ func main() {
 
 	gofakeit.Seed(time.Now().UnixNano())
 
-	var ip, httpMethod, path, httpVersion, referrer, http_x_forwarded_for,upstream,userAgent string
+	var ip, httpMethod, path, httpVersion, referrer, http_x_forwarded_for, upstream, userAgent string
 	var statusCode, bodyBytesSent int
 	var timeLocal time.Time
 	var responseTime float32
+	serverAddress := make([]string, 0)
+	serverAddress = append(serverAddress,
+		"164.212.119.105",
+		"221.244.152.157",
+		"118.181.3.12",
+		"148.253.64.0",
+		"101.33.60.0",
+		"54.93.127.14",
+		"59.25.140.33",
+	)
 
 	httpVersion = "HTTP/1.1"
 
@@ -44,7 +55,7 @@ func main() {
 
 		ip = weightedIPVersion(cfg.IPv4Percent)
 		http_x_forwarded_for = weightedIPVersion(cfg.IPv4Percent)
-		upstream = weightedIPVersion(cfg.IPv4Percent)
+		upstream = randomUpStream(serverAddress)
 		httpMethod = weightedHTTPMethod(cfg.PercentageGet, cfg.PercentagePost, cfg.PercentagePut, cfg.PercentagePatch, cfg.PercentageDelete)
 		path = randomPath(cfg.PathMinLength, cfg.PathMaxLength)
 		statusCode = weightedStatusCode(cfg.StatusOkPercent)
@@ -54,18 +65,23 @@ func main() {
 		referrer = httpReferrer()
 		timeLocal = timeStamp()
 
-
-		fmt.Printf("%s %s [%s] %v %s:8000 %f \"%s %s %s\" %v \"%s\" \"%s\"\n", ip,http_x_forwarded_for, timeLocal.Format("02/Jan/2006:15:04:05 -0700"),statusCode, upstream,responseTime, httpMethod, path, httpVersion, bodyBytesSent, referrer, userAgent)
+		fmt.Printf("%s %s [%s] %v %s:8000 %f \"%s %s %s\" %v \"%s\" \"%s\"\n", ip, http_x_forwarded_for, timeLocal.Format("02/Jan/2006:15:04:05 -0700"), statusCode, upstream, responseTime, httpMethod, path, httpVersion, bodyBytesSent, referrer, userAgent)
 	}
 }
 
-func timeStamp() time.Time {
-    current := time.Now()
-    start := current.AddDate(-1, 0, 0)
-    return gofakeit.DateRange(start, current)
+func randomUpStream(serverAddress []string) string {
+	rand.Seed(time.Now().Unix())
+	message := serverAddress[rand.Intn(len(serverAddress))]
+	return message
 }
-func httpReferrer() string{
-    return gofakeit.URL()
+
+func timeStamp() time.Time {
+	current := time.Now()
+	start := current.AddDate(-1, 0, 0)
+	return gofakeit.DateRange(start, current)
+}
+func httpReferrer() string {
+	return gofakeit.URL()
 }
 func realisticBytesSent(statusCode int) int {
 	if statusCode != 200 {
